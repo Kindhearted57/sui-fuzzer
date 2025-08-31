@@ -131,7 +131,7 @@ impl Worker for StatelessWorker {
             }
 
             match exec_result {
-                Ok(cov) => {
+                Ok((cov, gas_used)) => {
                     if let Some(coverage) = cov {
                         // Execute all activated detectors
                         self.execute_detectors(&coverage, None);

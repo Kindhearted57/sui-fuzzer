@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{HashSet, HashMap},
     sync::{Arc, RwLock},
     time::Instant,
 };
@@ -121,6 +121,8 @@ impl StatefulWorker {
         call_sequence.shuffle(&mut thread_rng());
         call_sequence
     }
+
+
 }
 
 impl Worker for StatefulWorker {
@@ -164,7 +166,9 @@ impl Worker for StatefulWorker {
                 }
 
                 match exec_result {
-                    Ok(_) => continue,
+                    Ok((_cov, gas_used)) => {
+                        self.stats.write().unwrap().update_gas_usage(&function, gas_used);
+                    },
                     Err((_cov, error)) => {
                         self.stats.write().unwrap().crashes += 1;
                         let crash = Crash::new(

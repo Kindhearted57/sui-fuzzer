@@ -155,7 +155,7 @@ impl Runner for SuiRunner {
     fn execute(
         &mut self,
         inputs: Vec<FuzzerType>,
-    ) -> Result<Option<Coverage>, (Option<Coverage>, Error)> {
+    ) -> Result<(Option<Coverage>, u64), (Option<Coverage>, Error)> {
         let mut remote_view = RemoteStore::new();
         remote_view.add_module(self.module.clone());
         let mut session = self.move_vm.new_session(&remote_view);
@@ -178,7 +178,7 @@ impl Runner for SuiRunner {
         );
 
         match result {
-            Ok(_values) => Ok(Some(Self::create_coverage(inputs.clone(), coverage))),
+            Ok(_values) => Ok((Some(Self::create_coverage(inputs.clone(), coverage)), 0u64)),
             Err(err) => {
                 let mut message = String::from("");
                 if let Some(m) = err.message() {

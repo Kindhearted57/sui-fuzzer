@@ -136,12 +136,16 @@ impl Runner for SuiRunner {
     fn execute(
         &mut self,
         inputs: Vec<FuzzerType>,
-    ) -> Result<Option<Coverage>, (Option<Coverage>, Error)> {
+    ) -> Result<(Option<Coverage>, u64), (Option<Coverage>, Error)> {
         let mut args = vec![];
         let mut inputs = inputs.clone();
         // Removes TxContext reference
         inputs.pop();
 
+        /*
+        Choose a random object ID from self.obj_ids
+        For value, wrap into SuiJson format
+         */
         for i in &generate_inputs(inputs) {
             args.push(match i {
                 MoveValue::Address(_) => SuiJsonValue::from_object_id(
@@ -153,7 +157,9 @@ impl Runner for SuiRunner {
                 _ => SuiJsonValue::new(move_value_to_json(i)).unwrap(),
             });
         }
-
+        /*
+        Send the mutated transaction and wait for response
+         */
         let response;
         response = self.send_transaction(
             &self
@@ -167,9 +173,29 @@ impl Runner for SuiRunner {
         );
 
         match response {
-            Ok(resp) => match resp.status() {
-                ExecutionStatus::Success => Ok(None),
-                ExecutionStatus::Failure { error, command: _ } => match error {
+            Ok(resp) => {
+                let gas_summary = match &resp {
+                    TransactionEffects::V1(v1) => v1.gas_cost_summary(),
+                    TransactionEffects::V2(v2) => v2.gas_cost_summary(),
+                };
+
+                /*
+                If successful execution, return coverage and total gas in parallel, coverage remains none
+                 */
+
+                let total_gas = gas_summary.computation_cost + gas_summary.storage_cost;
+
+                match resp.status() {
+                ExecutionStatus::Success => Ok((None, total_gas)),
+
+                /*
+                If execution fails, match different type of failures
+                1. PrimitiveRuntimeError, directly return error
+                 */
+
+                ExecutionStatus::Failure { error, command: _ } => {
+                    let gas = total_gas;
+                    match error {
                     ExecutionFailureStatus::MovePrimitiveRuntimeError(loc) => {
                         if let Some(location) = &loc.0 {
                             let error = Error::Runtime {
@@ -210,15 +236,19 @@ impl Runner for SuiRunner {
                             message: error.to_string(),
                         },
                     )),
-                },
+                }
             },
-            Err(err) => Err((
-                None,
-                Error::Unknown {
+            }
+        },
+            Err(err) => {
+                Err((
+                    None,
+                    Error::Unknown {
                     message: err.to_string(),
                 },
-            )),
-        }
+            ))
+        },
+    }
     }
 
     fn get_target_parameters(&self) -> Vec<FuzzerType> {

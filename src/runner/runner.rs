@@ -5,7 +5,7 @@ use crate::mutator::types::Type;
 pub trait Runner {
     /// Runs the selected target
     fn execute(&mut self, inputs: Vec<Type>)
-        -> Result<Option<Coverage>, (Option<Coverage>, Error)>;
+        -> Result<(Option<Coverage>, u64), (Option<Coverage>, Error)>;
     /// Sets the target function
     fn set_target_function(&mut self, function: &Type);
     /// Returns the target parameters

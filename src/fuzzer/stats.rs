@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use crate::{
+    mutator::{types::Type as FuzzerType}};
 #[derive(Clone)]
 pub struct Stats {
     pub crashes: u64,
@@ -7,6 +10,7 @@ pub struct Stats {
     pub execs_per_sec: u64,
     pub coverage_size: u64,
     pub secs_since_last_cov: u64,
+    pub gas_map: HashMap<String, u64>
 }
 
 impl Stats {
@@ -19,6 +23,18 @@ impl Stats {
             coverage_size: 0,
             execs_per_sec: 0,
             secs_since_last_cov: 0,
+            gas_map: HashMap::new()
         }
+    }
+    pub fn update_gas_usage(&mut self, function: &FuzzerType, gas: u64){
+        let key = function.as_function().unwrap().0.clone();
+        let entry = self.gas_map.entry(key).or_insert(0);
+        if gas > *entry {
+            *entry = gas;
+        }
+    }
+    pub fn get_max_gas(&self, function: &FuzzerType) -> u64 {
+        let key = function.as_function().unwrap().0.clone();
+        *self.gas_map.get(&key).unwrap_or(&0)
     }
 }
