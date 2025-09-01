@@ -33,6 +33,7 @@ aptos-types = { path = "./aptos-core/types" }
 aptos-vm = { path = "./aptos-core/aptos-move/aptos-vm" }
 move-core-types = { path = "./aptos-core/third_party/move/move-core/types" }
 bcs = { git = "https://github.com/movementlabsxyz/bcs.git"}
+move-model = { git = "https://github.com/movementlabsxyz/move.git", branch = "main", package = "move-model" }
 
 [features]
 default = ["aptos"]

@@ -1,0 +1,51 @@
+[package]
+name = "sui-fuzzer"
+version = "0.1.0"
+edition = "2021"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+memory-stats = "1.1.0"
+
+[dependencies]
+bichannel = "0.0.4"
+clap = { version = "4.4.4", features = ["derive"] }
+ratatui = { version = "0.23.0", features = ["all-widgets"] }
+serde = { version = "1.0.188", features = ["derive", "serde_derive"] }
+serde_json = "1.0.107"
+basic_mutator = { git = "https://github.com/gamozolabs/basic_mutator" }
+strum = { version = "0.25", features = ["derive"] }
+crossterm = "0.27.0"
+time = "0.3.29"
+chrono = "0.4.31"
+itertools = "0.12.0"
+futures = "0.3.30"
+tokio = { version = "1.2", features = ["full"] }
+tokio-core = "0.1.18"
+enum-as-inner = "0.6.0"
+rand = "0.8.5"
+url = "2.0"
+
+# Sui dependencies
+sui-move-build = { path = "./sui/crates/sui-move-build"}
+move-package = { path = "./sui/external-crates/move/crates/move-package"}
+move-vm-runtime = { path = "./sui/external-crates/move/crates/move-vm-runtime"}
+move-vm-config = { path = "./sui/external-crates/move/crates/move-vm-config"}
+sui-move-natives-latest = { path = "./sui/sui-execution/latest/sui-move-natives" }
+move-vm-types = { path = "./sui/external-crates/move/crates/move-vm-types" }
+move-binary-format = { path = "./sui/external-crates/move/crates/move-binary-format" }
+move-bytecode-utils = { path = "./sui/external-crates/move/crates/move-bytecode-utils" }
+move-model = { path = "./sui/external-crates/move/crates/move-model" }
+move-core-types = { path = "./sui/external-crates/move/crates/move-core-types" }
+shared-crypto = { path = "./sui/crates/shared-crypto" }
+sui-keys = { path = "./sui/crates/sui-keys" }
+sui-types = { path = "./sui/crates/sui-types" }
+sui-sdk = { path = "./sui/crates/sui-sdk" }
+sui-json = { path = "./sui/crates/sui-json" }
+sui-json-rpc = { path = "./sui/crates/sui-json-rpc" }
+transaction-fuzzer = { path = "./sui/crates/transaction-fuzzer" }
+sui-core = { path = "./sui/crates/sui-core", features = ["test-utils"] }
+sui-transaction-builder = { path = "./sui/crates/sui-transaction-builder" }
+
+[features]
+default = ["sui"]
+sui = []
