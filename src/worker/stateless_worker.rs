@@ -86,6 +86,7 @@ impl StatelessWorker {
                 Type::U64(_) => Type::U64(0),
                 Type::U128(_) => Type::U128(0),
                 Type::Bool(_) => Type::Bool(true),
+                Type::Address(_) => Type::Address([0; 32]),
                 Type::Vector(t, vec) => Type::Vector(t, Self::init_inputs(vec)),
                 Type::Struct(_) => todo!(),
                 Type::Reference(b, t) => Type::Reference(b, t),

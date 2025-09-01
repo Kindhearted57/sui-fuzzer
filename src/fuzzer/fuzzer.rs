@@ -1,4 +1,7 @@
 use bichannel::Channel;
+#[cfg(feature = "aptos")]
+use move_package::BuildConfig;
+#[cfg(feature = "sui")]
 use sui_move_build::BuildConfig;
 use std::collections::HashSet;
 use std::collections::VecDeque;
@@ -21,13 +24,20 @@ use crate::mutator::sui_mutator::SuiMutator;
 use crate::worker::worker::Worker;
 use crate::worker::worker::WorkerEvent;
 use crate::worker::stateless_worker::StatelessWorker;
+#[cfg(feature = "sui")]
 use crate::runner::stateful_runner::sui_runner::SuiRunner as StatefulSuiRunner;
+#[cfg(feature = "sui")]
 use crate::runner::stateless_runner::sui_runner::SuiRunner as StatelessSuiRunner;
+#[cfg(feature = "aptos")]
+use crate::runner::stateful_runner::aptos_runner::AptosRunner as StatefulAptosRunner;
+use crate::runner::chain::Chain;
 use super::crash::Crash;
 use super::fuzzer_utils::load_corpus;
 use super::fuzzer_utils::load_crashes;
 use super::fuzzer_utils::write_corpusfile;
 use super::fuzzer_utils::write_crashfile;
+use move_package::compilation::compiled_package::CompiledPackage;
+use move_package::compilation::compiled_package::CompiledUnitWithSource;
 
 pub struct Fuzzer {
     // Fuzzer configuration
@@ -134,12 +144,28 @@ impl Fuzzer {
             self.threads_stats.push(stats.clone());
             // Change here the runner you want to create
             if let Some(parameter) = &self.config.contract {
-                // Creates the sui runner with the runner parameter found in the config
-                let runner = Box::new(StatelessSuiRunner::new(
+                // Chain is determined at compile time
+                #[cfg(feature = "sui")]
+                let chain = Chain::Sui;
+                #[cfg(feature = "aptos")]
+                let chain = Chain::Aptos;
+                let runner: Box<dyn Runner> = match chain {
+                    #[cfg(feature = "sui")]
+                    Chain::Sui => Box::new(StatelessSuiRunner::new(
                         &parameter.clone(),
                         &self.target_module,
                         &self.target_function.clone().unwrap(),
-                    ));
+                    )),
+                    #[cfg(feature = "aptos")]
+                    Chain::Aptos => {
+                        // For now, Aptos only supports stateful mode
+                        panic!("Stateless mode not yet supported for Aptos. Please use stateful mode.");
+                    },
+                    #[cfg(not(feature = "sui"))]
+                    Chain::Sui => unreachable!("Sui feature not enabled"),
+                    #[cfg(not(feature = "aptos"))]
+                    Chain::Aptos => unreachable!("Aptos feature not enabled"),
+                };
                 self.target_parameters = runner.get_target_parameters();
                 self.max_coverage = runner.get_max_coverage();
                 // Increment seed so that each worker doesn't do the same thing
@@ -168,6 +194,7 @@ impl Fuzzer {
         }
     }
 
+    #[cfg(feature = "sui")]
     fn build_test_modules(test_dir: &str) -> (Vec<u8>, Vec<Vec<u8>>) {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.extend([test_dir]);
@@ -179,10 +206,40 @@ impl Fuzzer {
             package.get_package_bytes(with_unpublished_deps),
         )
     }
+    #[cfg(feature = "aptos")]
+    fn build_test_modules(test_dir: &str) -> Vec<Vec<u8>> {
+        // Locate to contract source files
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.push(test_dir);
 
+        // Set up config tool
+        let config = BuildConfig {
+            test_mode: true,
+            install_dir: None,
+            generate_docs: false,
+            ..Default::default()
+        };
+
+        // Compile Move package
+        let compiled_pkg: CompiledPackage =
+            config.compile_package_no_exit(&path, &mut Vec::new()).unwrap();
+
+
+        let modules: Vec<Vec<u8>> = compiled_pkg
+            .root_modules()
+            .map(|unit: &CompiledUnitWithSource| {
+                unit.unit.serialize(None)
+            })
+            .collect();
+
+        modules
+    }
     fn start_stateful_threads(&mut self) {
 
+        #[cfg(feature = "sui")]
         let (_, modules) = Self::build_test_modules(self.config.contract.as_ref().unwrap());
+        #[cfg(feature = "aptos")]
+        let modules = vec![];
 
         for i in 0..self.config.nb_threads {
             // Creates the communication channel for the fuzzer and worker sides
@@ -191,10 +248,29 @@ impl Fuzzer {
             let stats = Arc::new(RwLock::new(Stats::new()));
             self.threads_stats.push(stats.clone());
             // Change here the runner you want to create
-            let runner = Box::new(StatefulSuiRunner::new(
+            // Chain is determined at compile time
+            #[cfg(feature = "sui")]
+            let chain = Chain::Sui;
+            #[cfg(feature = "aptos")]
+            let chain = Chain::Aptos;
+            let runner: Box<dyn crate::runner::runner::StatefulRunner> = match chain {
+                #[cfg(feature = "sui")]
+                Chain::Sui => Box::new(StatefulSuiRunner::new(
                     &self.target_module,
                     modules.clone(),
-                ));
+                )),
+                #[cfg(feature = "aptos")]
+                Chain::Aptos => {
+                    Box::new(StatefulAptosRunner::new(
+                        &self.target_module,
+                        modules.clone(),
+                    ))
+                },
+                #[cfg(not(feature = "sui"))]
+                Chain::Sui => unreachable!("Sui feature not enabled"),
+                #[cfg(not(feature = "aptos"))]
+                Chain::Aptos => unreachable!("Aptos feature not enabled"),
+            };
             self.max_coverage = runner.get_max_coverage();
             // Increment seed so that each worker doesn't do the same thing
             let seed = self.config.seed.unwrap() + (i as u64);

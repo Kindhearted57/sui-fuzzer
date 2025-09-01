@@ -5,7 +5,9 @@ use std::{
     time::SystemTime,
 };
 use chrono::{DateTime, Utc};
-use crate::runner::{runner::Runner, stateless_runner::sui_runner::SuiRunner};
+use crate::runner::runner::Runner;
+#[cfg(feature = "sui")]
+use crate::runner::stateless_runner::sui_runner::SuiRunner;
 use super::{config::Config, coverage::Coverage, crash::Crash};
 
 pub fn write_crashfile(path: &str, crash: Crash) {
@@ -45,11 +47,18 @@ pub fn replay(config: &Config, crashfile_path: &str) {
     let crash: Crash = serde_json::from_str(&data).expect("Could not load crash file !");
 
     if let Some(contract_file) = &config.contract {
-        let mut runner =
-            SuiRunner::new(&contract_file, &crash.target_module, &crash.target_function);
-        match runner.execute(crash.inputs) {
-            Ok(_) => unreachable!(),
-            Err(e) => println!("{:?}", e.1),
+        #[cfg(feature = "sui")]
+        {
+            let mut runner =
+                SuiRunner::new(&contract_file, &crash.target_module, &crash.target_function);
+            match runner.execute(crash.inputs) {
+                Ok(_) => unreachable!(),
+                Err(e) => println!("{:?}", e.1),
+            }
+        }
+        #[cfg(feature = "aptos")]
+        {
+            println!("Crash replay not yet implemented for Aptos");
         }
     }
 }

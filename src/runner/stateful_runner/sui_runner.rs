@@ -1,3 +1,4 @@
+#[cfg(feature = "sui")]
 use std::sync::Arc;
 use itertools::Itertools;
 use move_core_types::runtime_value::MoveValue;

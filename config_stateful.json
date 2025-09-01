@@ -1,0 +1,11 @@
+{
+  "use_ui": true,
+  "nb_threads": 2,
+  "seed": 4242,
+  "contract_file": "./examples/calculator_package",
+  "execs_before_cov_update": 10000,
+  "corpus_dir": "./corpus",
+  "crashes_dir": "./crashes",
+  "fuzz_functions_prefix": "fuzz_",
+  "max_call_sequence_size": 5
+}

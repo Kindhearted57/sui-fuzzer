@@ -4,7 +4,9 @@ use fuzzer::fuzzer_utils::replay;
 
 use crate::fuzzer::config::Config;
 use crate::fuzzer::fuzzer::Fuzzer;
+#[cfg(feature = "sui")]
 use crate::runner::stateless_runner::sui_runner_utils::get_fuzz_functions_from_bin;
+use crate::runner::chain::Chain;
 
 mod detector;
 mod fuzzer;
@@ -57,12 +59,19 @@ fn main() {
                     "Available functions starting with \"{}\":",
                     config.fuzz_functions_prefix
                 );
-                for function in get_fuzz_functions_from_bin(
-                    &contract_file,
-                    &target_module,
-                    &config.fuzz_functions_prefix,
-                ) {
-                    println!("- {}", function);
+                #[cfg(feature = "sui")]
+                {
+                    for function in get_fuzz_functions_from_bin(
+                        &contract_file,
+                        &target_module,
+                        &config.fuzz_functions_prefix,
+                    ) {
+                        println!("- {}", function);
+                    }
+                }
+                #[cfg(feature = "aptos")]
+                {
+                    println!("Function listing not yet implemented for Aptos");
                 }
             } else {
                 println!("Missing contract file in configuration !");
