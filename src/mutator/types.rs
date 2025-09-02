@@ -11,6 +11,8 @@ pub enum Type {
     U128(u128),
 
     Bool(bool),
+    
+    Address([u8; 32]),
 
     Vector(Box<Type>, Vec<Type>),
 
@@ -29,7 +31,8 @@ impl Display for Type {
             | Type::U32(_)
             | Type::U64(_)
             | Type::U128(_)
-            | Type::Bool(_) => write!(f, "{:?}", self),
+            | Type::Bool(_)
+            | Type::Address(_) => write!(f, "{:?}", self),
             Type::Vector(t, v) => match **t {
                 Type::U8(_) => {
                     let buffer: Vec<u8> = v

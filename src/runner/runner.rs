@@ -2,7 +2,7 @@ use crate::fuzzer::coverage::Coverage;
 use crate::fuzzer::error::Error;
 use crate::mutator::types::Type;
 
-pub trait Runner {
+pub trait Runner: Send {
     /// Runs the selected target
     fn execute(&mut self, inputs: Vec<Type>)
         -> Result<(Option<Coverage>, u64), (Option<Coverage>, Error)>;
@@ -18,6 +18,6 @@ pub trait Runner {
     fn get_max_coverage(&self) -> usize;
 }
 
-pub trait StatefulRunner: Runner {
+pub trait StatefulRunner: Runner + Send {
     fn setup(&mut self);
 }
