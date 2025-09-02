@@ -1,0 +1,11 @@
+{
+  "use_ui": false,
+  "nb_threads": 1, 
+  "seed": 4242,
+  "contract": "./examples/razor_amm",
+  "execs_before_cov_update": 10000,
+  "corpus_dir": "./corpus",
+  "crashes_dir": "./crashes",
+  "fuzz_functions_prefix": "fuzz_",
+  "max_call_sequence_size": 5
+}
