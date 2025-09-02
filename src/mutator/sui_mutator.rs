@@ -18,7 +18,34 @@ impl SuiMutator {
 
 impl Mutator for SuiMutator {
     fn mutate(&mut self, inputs: &Vec<Type>, nb_mutation: usize) -> Vec<Type> {
+        self.mutate_with_gas(inputs, nb_mutation, None)
+    }
+
+    fn generate_number(&self, min: u64, max: u64) -> u64 {
+        let mut rng = Rng {
+            seed: self.seed,
+            exp_disabled: false,
+        };
+        rng.rand(min.try_into().unwrap(), max.try_into().unwrap())
+            .try_into()
+            .unwrap()
+    }
+}
+
+
+impl SuiMutator {
+    pub fn mutate_with_gas(&mut self, inputs: &Vec<Type>, nb_mutation: usize, target_gas: Option<u64>) -> Vec<Type> {
         let mut res = vec![];
+
+        // Calculate gas bias - higher gas leads to more mutations
+        let gas_bias_multiplier = if let Some(gas) = target_gas {
+            // Use logarithmic scaling to prevent excessive mutations
+            let normalized_gas = (gas as f64).ln().max(1.0);
+            // Scale to reasonable range (1.0 to 3.0 multiplier)
+            1.0 + (normalized_gas / 10.0).min(2.0)
+        } else {
+            1.0
+        };
 
         for input in inputs {
             self.mutator.input.clear();
@@ -50,8 +77,11 @@ impl Mutator for SuiMutator {
                 _ => unimplemented!(),
             }
 
-            self.mutator.mutate(nb_mutation, &EmptyDatabase);
+            // Apply gas bias to number of mutations
+            let biased_mutations = ((nb_mutation as f64) * gas_bias_multiplier).round() as usize;
+            let final_mutations = biased_mutations.max(1).min(nb_mutation * 3); // Cap at 3x original
 
+            self.mutator.mutate(final_mutations, &EmptyDatabase);
             // The size of the input needs to be the right size
             res.push(match input {
                 Type::U8(_) => {
@@ -99,15 +129,5 @@ impl Mutator for SuiMutator {
             });
         }
         res
-    }
-
-    fn generate_number(&self, min: u64, max: u64) -> u64 {
-        let mut rng = Rng {
-            seed: self.seed,
-            exp_disabled: false,
-        };
-        rng.rand(min.try_into().unwrap(), max.try_into().unwrap())
-            .try_into()
-            .unwrap()
     }
 }
