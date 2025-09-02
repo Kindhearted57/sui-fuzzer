@@ -220,10 +220,21 @@ impl Fuzzer {
             ..Default::default()
         };
 
-        // Compile Move package
-        let compiled_pkg: CompiledPackage =
-            config.compile_package_no_exit(&path, &mut Vec::new()).unwrap();
+        println!("Starting compilation...");
+        let mut error_buffer = Vec::new();
+        let compilation_result = config.compile_package_no_exit(&path, &mut error_buffer);
 
+        match &compilation_result {
+            Ok(_) => println!("Compilation successful!"),
+            Err(e) => {
+                println!("Compilation failed with error: {:?}", e);
+                if !error_buffer.is_empty() {
+                    println!("Error buffer contents: {}", String::from_utf8_lossy(&error_buffer));
+                }
+            }
+        }
+
+        let compiled_pkg: CompiledPackage= compilation_result.unwrap();
 
         let modules: Vec<Vec<u8>> = compiled_pkg
             .root_modules()
@@ -239,7 +250,7 @@ impl Fuzzer {
         #[cfg(feature = "sui")]
         let (_, modules) = Self::build_test_modules(self.config.contract.as_ref().unwrap());
         #[cfg(feature = "aptos")]
-        let modules = vec![];
+        let modules = Self::build_test_modules(self.config.contract.as_ref().unwrap());
 
         for i in 0..self.config.nb_threads {
             // Creates the communication channel for the fuzzer and worker sides
