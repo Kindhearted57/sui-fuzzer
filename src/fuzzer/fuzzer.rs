@@ -214,7 +214,7 @@ impl Fuzzer {
 
         // Set up config tool
         let config = BuildConfig {
-            test_mode: true,
+            test_mode: false,
             install_dir: None,
             generate_docs: false,
             ..Default::default()
@@ -234,8 +234,11 @@ impl Fuzzer {
             }
         }
 
+        #[cfg(feature= "sui")]
         let compiled_pkg: CompiledPackage= compilation_result.unwrap();
 
+        #[cfg(feature= "aptos")]
+        let (compiled_pkg, _global_env) = compilation_result.unwrap();
         let modules: Vec<Vec<u8>> = compiled_pkg
             .root_modules()
             .map(|unit: &CompiledUnitWithSource| {
@@ -249,6 +252,9 @@ impl Fuzzer {
 
         #[cfg(feature = "sui")]
         let (_, modules) = Self::build_test_modules(self.config.contract.as_ref().unwrap());
+        /*
+          compiles Move contracts from source code and returns bytecode in modules
+         */
         #[cfg(feature = "aptos")]
         let modules = Self::build_test_modules(self.config.contract.as_ref().unwrap());
 
@@ -286,6 +292,9 @@ impl Fuzzer {
             // Increment seed so that each worker doesn't do the same thing
             let seed = self.config.seed.unwrap() + (i as u64);
             let execs_before_cov_update = self.config.execs_before_cov_update;
+            /* TODO:
+            Currently addded gas based logic inside SuiMutator. In the future it should be separated into AptosMutator instead of reusing SuiMutator
+             */
             let mutator = Box::new(SuiMutator::new(seed, 12));
             let detectors = self.detectors.clone();
             let coverage_set = self.coverage_set.clone();

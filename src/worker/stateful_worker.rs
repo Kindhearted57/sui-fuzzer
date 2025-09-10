@@ -7,8 +7,9 @@ use std::{
 use bichannel::Channel;
 #[cfg(feature = "sui")]
 use move_model::ty::Type;
+use move_model::metadata::{CompilerVersion, LanguageVersion};
 use rand::{seq::SliceRandom, thread_rng};
-
+use ark_std::iterable::Iterable;
 use crate::{
     detector::detector::AvailableDetector,
     fuzzer::{coverage::Coverage, crash::Crash, stats::Stats},
@@ -78,11 +79,25 @@ fn generate_abi_from_source(
         .resolution_graph_for_package(Path::new(contract), &mut std::io::stderr())
         .unwrap();
 
+    #[cfg(feature="sui")]
     let source_env = ModelBuilder::create(
         resolution_graph,
         ModelConfig {
             all_files_as_targets: false,
             target_filter: None,
+        },
+    )
+    .build_model()
+    .unwrap();
+
+    #[cfg(feature="aptos")]
+    let source_env = ModelBuilder::create(
+        resolution_graph,
+        ModelConfig {
+            all_files_as_targets: false,
+            target_filter: None,
+            compiler_version: CompilerVersion::default(),
+            language_version: LanguageVersion::default()
         },
     )
     .build_model()
@@ -97,6 +112,7 @@ fn generate_abi_from_source(
             .get_functions()
             .find(|f| f.get_name_str() == target_function);
         if let Some(f) = func {
+
             let max_coverage = f.get_bytecode().len();
             let params = f.get_parameters().iter().map(|p| convert_move_type_to_fuzzer_type(&p.1)).collect();
             (params, max_coverage)
@@ -135,6 +151,8 @@ fn generate_abi_from_source_starts_with(
         ModelConfig {
             all_files_as_targets: false,
             target_filter: None,
+            compiler_version: CompilerVersion::default(),
+            language_version: LanguageVersion::default()
         },
     )
     .build_model()
@@ -155,11 +173,18 @@ fn generate_abi_from_source_starts_with(
                 .collect();
 
             // Extract actual return types from function signature
+            #[cfg(feature="sui")]
             let return_types: Vec<crate::mutator::types::Type> = func_env
                 .get_return_types()
                 .iter()
                 .map(|return_type| convert_move_type_to_fuzzer_type(return_type))
                 .collect();
+            #[cfg(feature="aptos")]
+            let return_types: Vec<crate::mutator::types::Type> = vec![
+    convert_move_type_to_fuzzer_type(&func_env.get_result_type())
+];
+
+
 
             functions.push((
                 func_env.get_name_str().to_string(),
@@ -331,6 +356,9 @@ impl Worker for StatefulWorker {
 
                 match exec_result {
                     Ok((_cov, gas_used)) => {
+                        /*
+                          Update gas usage when execution successes
+                         */
                         self.stats.write().unwrap().update_gas_usage(&function, gas_used);
                     },
                     Err((_cov, error)) => {
