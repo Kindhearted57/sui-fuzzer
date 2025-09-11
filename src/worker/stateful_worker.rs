@@ -336,8 +336,9 @@ impl Worker for StatefulWorker {
                 // Input initialization
                 let mut inputs = function.as_function().unwrap().1.clone();
 
-                // Mutate inputs
-                inputs = self.mutator.mutate(&inputs, 4);
+                // Mutate inputs with gas bias
+                let current_gas = self.stats.read().unwrap().get_max_gas(&function);
+                inputs = self.mutator.mutate_with_gas(&inputs, 4, Some(current_gas));
 
                 //eprintln!("{} {:?}", function.as_function().unwrap().0, inputs);
 

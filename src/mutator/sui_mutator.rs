@@ -30,6 +30,10 @@ impl Mutator for SuiMutator {
             .try_into()
             .unwrap()
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 

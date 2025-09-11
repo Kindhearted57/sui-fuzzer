@@ -115,6 +115,7 @@ impl Fuzzer {
         } else {
             None
         };
+        // corpus - A set of interesting test inputs (Not used in the context of sui stateful fuzzer)
         let coverage_set = load_corpus(&config.corpus_dir).unwrap_or_default();
         let unique_crashes_set = load_crashes(&config.crashes_dir).unwrap_or_default();
         Fuzzer {
